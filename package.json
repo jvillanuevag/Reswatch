@@ -1,0 +1,40 @@
+{
+  "name": "reswatch",
+  "version": "1.0.0",
+  "description": "RESWATCH — Simulador interactivo de Merged Reality: rescate tras un terremoto guiado por un reloj de emergencia con sensores biométricos, barómetro y LoRa.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node scripts/simtest.mjs && node scripts/domtest.mjs",
+    "test:sim": "node scripts/simtest.mjs",
+    "test:dom": "node scripts/domtest.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jvillanuevag/Reswatch.git"
+  },
+  "keywords": [
+    "merged-reality",
+    "mixed-reality",
+    "lora",
+    "biometrics",
+    "rescue",
+    "threejs",
+    "game"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jvillanuevag/Reswatch/issues"
+  },
+  "homepage": "https://github.com/jvillanuevag/Reswatch#readme",
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "vite": "^6.3.5"
+  }
+}

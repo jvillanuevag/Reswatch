@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RESWATCH — Merged Reality: Protocolo de Rescate</title>
+  <meta name="theme-color" content="#04060a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2304131b' stroke='%2335e6ff' stroke-width='3'/%3E%3Cpath d='M14 32h8l4-9 6 18 5-12 3 3h10' fill='none' stroke='%234dff9e' stroke-width='3.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <meta name="description" content="Simulador interactivo de Merged Reality: sobrevive sepultado tras un terremoto guiado por tu reloj de emergencia biométrico con LoRa." />
+  <style>
+    html, body { margin: 0; padding: 0; background: #04060a; overflow: hidden; height: 100%; }
+    #boot-fallback {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #7fdbea; font-family: ui-monospace, monospace; letter-spacing: 0.2em; z-index: 5;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="boot-fallback">INICIALIZANDO RESWATCH…</div>
+
+    <!-- Capas de pantalla (merged-reality post-fx en DOM) -->
+    <div id="vignette" class="fx"></div>
+    <div id="redpulse" class="fx"></div>
+    <div id="scanlines" class="fx"></div>
+    <div id="whiteness" class="fx"></div>
+    <div id="hypoxia" class="fx"></div>
+
+    <!-- HUD holográfico -->
+    <div id="hud" class="hidden">
+
+      <!-- Objetivo actual -->
+      <div id="objective-wrap">
+        <div id="objective">OBJETIVO</div>
+        <div id="hint"></div>
+      </div>
+      <div id="timer">00:00</div>
+
+      <!-- Panel signos vitales -->
+      <div class="panel" id="vitals-panel">
+        <div class="panel-title">SIGNOS VITALES <span class="dot" id="vitals-dot"></span></div>
+        <div class="vitals-row">
+          <div class="vital-big"><span id="hr-val">--</span><span class="unit">BPM</span></div>
+          <canvas id="ecg" width="216" height="52"></canvas>
+        </div>
+        <div class="meter-line">
+          <span class="mlabel">SpO₂</span>
+          <div class="bar"><div class="bar-fill" id="spo2-fill"></div></div>
+          <span class="mval" id="spo2-val">--%</span>
+        </div>
+        <div class="meter-line">
+          <span class="mlabel">COHERENCIA</span>
+          <div class="bar"><div class="bar-fill coh" id="coherence-fill"></div></div>
+          <span class="mval" id="coh-val">--%</span>
+        </div>
+        <div class="meter-line">
+          <span class="mlabel">ANSIEDAD</span>
+          <div class="bar"><div class="bar-fill anx" id="anx-fill"></div></div>
+          <span class="mval" id="resp-val">-- rpm</span>
+        </div>
+      </div>
+
+      <!-- Panel entorno / reloj -->
+      <div class="panel" id="env-panel">
+        <div class="panel-title">BARÓMETRO · MEMS</div>
+        <div class="env-grid">
+          <span>PRESIÓN</span><b id="baro-hpa">-- hPa</b>
+          <span>PROFUNDIDAD</span><b id="baro-depth">-- m</b>
+          <span>CALIBRACIÓN</span>
+          <div class="bar mini"><div class="bar-fill cal" id="calib-fill"></div></div>
+        </div>
+        <div id="calib-state" class="state-tag">SIN CALIBRAR</div>
+
+        <div class="panel-title sep">ENLACE LoRa · 915 MHz</div>
+        <div class="env-grid">
+          <span>CALIDAD</span>
+          <div class="bar mini"><div class="bar-fill sig" id="sig-fill"></div></div>
+          <span>SF / RSSI</span><b id="lora-sf">--</b>
+          <span>SNR</span><b id="lora-snr">-- dB</b>
+          <span>PAQUETES</span><b id="pkt-info">0 TX · 0 OK</b>
+          <span>PRECISIÓN</span><b id="acc-val">SIN FIJACIÓN</b>
+        </div>
+        <div class="cooldown-wrap"><div id="tx-cooldown"></div><span id="tx-label">LISTO PARA TX (T)</span></div>
+      </div>
+
+      <!-- Panel rescate -->
+      <div class="panel" id="rescue-panel">
+        <div class="panel-title">PROTOCOLO DE RESCATE</div>
+        <div id="rescue-phase" class="state-tag phase">EN ESPERA</div>
+        <div id="tri-state">Triangulación: —</div>
+        <div class="meter-line big">
+          <div class="bar"><div class="bar-fill resc" id="rescue-prog-fill"></div></div>
+          <span class="mval" id="rescue-prog-val">0%</span>
+        </div>
+        <div id="rescue-strategy">Estrategia: a la espera de datos biométricos…</div>
+      </div>
+
+      <!-- Registro de radio -->
+      <div id="log"></div>
+
+      <!-- Guía de respiración -->
+      <div id="breath-wrap">
+        <div id="breath-ring"><div id="breath-core"></div></div>
+        <div id="breath-phase">INHALA</div>
+        <div id="breath-btn">MANTÉN <b>ESPACIO</b> al inhalar · suelta al exhalar <span class="touch">(o mantén pulsado aquí)</span></div>
+      </div>
+
+      <!-- Botones de capa MR y audio -->
+      <div id="sys-btns">
+        <button class="sysbtn" id="layer-btn">CAPA MR: FUSIÓN</button>
+        <button class="sysbtn" id="mute-btn">AUDIO: ON</button>
+        <button class="sysbtn" id="pause-btn">PAUSA (P)</button>
+      </div>
+
+      <div id="toast"></div>
+      <div id="pause-overlay" class="hidden">— PAUSA —<br/><small>P para continuar</small></div>
+    </div>
+
+    <!-- Pantalla de menú -->
+    <div id="menu-screen" class="screen">
+      <div class="menu-box">
+        <div class="menu-kicker">SIMULADOR DE MERGED REALITY · v1.0</div>
+        <h1>RESWATCH</h1>
+        <div class="menu-sub">Protocolo de rescate biométrico tras el colapso</div>
+        <p class="brief">
+          Un terremoto de magnitud 7.2 ha derrumbado el edificio. Estás sepultado a varios metros
+          de profundidad, pero llevas el <b>RESWATCH</b>: un reloj de emergencia que proyecta una capa
+          de realidad fusionada sobre los escombros. Sus sensores —<b>pulso, SpO₂, barómetro y radio LoRa</b>—
+          son tu única línea de vida.<br/><br/>
+          El pánico apaga tu señal. La calma la enciende. Los drones y equipos de socorro holográficos
+          leerán tus signos vitales en tiempo real, triangularán tu posición y adaptarán la estrategia
+          de rescate a tu estado. <b>Respira. Transmite. Sobrevive.</b>
+        </p>
+        <div class="controls-grid">
+          <div><kbd>ESPACIO</kbd> (mantener)</div><div>Respirar con el anillo guía — inhala al mantener, exhala al soltar</div>
+          <div><kbd>ARRASTRAR</kbd> / <kbd>RUEDA</kbd> sobre el reloj</div><div>Girar el bisel — cambiar app del reloj (VITAL · BARO · LORA · SOS)</div>
+          <div><kbd>T</kbd> o clic en reloj (app SOS)</div><div>Transmitir paquete LoRa con tu reporte biométrico</div>
+          <div><kbd>L</kbd></div><div>Ciclar capas MR: Passthrough → Fusión → Diagnóstico</div>
+          <div><kbd>M</kbd> · <kbd>P</kbd></div><div>Silenciar audio · Pausa</div>
+        </div>
+        <div class="warn-line">⚠ Simulación: los signos vitales son modelados. Si el pulso o la ansiedad se disparan, la visibilidad cae y el peligro aumenta.</div>
+        <button id="start-btn" class="bigbtn">▶ INICIAR SIMULACIÓN</button>
+        <div class="menu-foot">Recomendado con audio · Requiere WebGL2</div>
+      </div>
+    </div>
+
+    <!-- Pantalla final -->
+    <div id="end-screen" class="screen hidden">
+      <div class="menu-box">
+        <div class="menu-kicker" id="end-kicker">INFORME POST-RESCATE</div>
+        <h1 id="end-title">RESCATE COMPLETADO</h1>
+        <div class="menu-sub" id="end-sub"></div>
+        <div id="end-rating-wrap"><div id="end-rating">A</div><div id="end-rating-label">RANGO OPERADOR</div></div>
+        <div id="end-stats"></div>
+        <button id="restart-btn" class="bigbtn">↻ REINTENTAR SIMULACIÓN</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
