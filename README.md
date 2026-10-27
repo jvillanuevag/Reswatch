@@ -1,5 +1,10 @@
 # RESWATCH — Merged Reality: Protocolo de Rescate
 
+[![Desplegar RESWATCH en GitHub Pages](https://github.com/jvillanuevag/Reswatch/actions/workflows/deploy.yml/badge.svg)](https://github.com/jvillanuevag/Reswatch/actions/workflows/deploy.yml)
+[![Sitio en vivo](https://img.shields.io/badge/jugar-en%20vivo-35e6ff)](https://jvillanuevag.github.io/Reswatch/)
+
+**▶ Jugar ahora: <https://jvillanuevag.github.io/Reswatch/>**
+
 Simulador interactivo de **Realidad Mixta / Merged Reality** en el navegador. El terremoto ha
 derribado el edificio: estás sepultado bajo los escombros y lo único que te conecta con el mundo es
 el **RESWATCH**, un reloj de emergencia con sensores biométricos (pulso y oxígeno), barómetro y
@@ -89,6 +94,28 @@ coherencia·0.12`. Se aplica a niebla volumétrica, viñeta, FOV y contraste de 
 
 ---
 
+## 🚀 Despliegue (GitHub Pages)
+
+El sitio se publica automáticamente en **<https://jvillanuevag.github.io/Reswatch/>** con el
+workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+**Disparadores:** cada push a `main` y ejecuciones manuales (`workflow_dispatch`).
+**Secuencia:** `npm ci` → `npm test` (simulación + presentación) → `npm run build` → verificación del
+artefacto → publicación → comprobación del sitio en vivo.
+
+La compilación usa `base: './'` en `vite.config.js`, por lo que todos los assets se resuelven de forma
+relativa y el subpath `/Reswatch/` funciona sin configuración extra. El despliegue está aislado en el
+environment `github-pages` con permisos mínimos (`contents: read`, `pages: write`, `id-token: write`).
+
+Requisitos de una sola vez en el repositorio: **Settings → Pages → Source: GitHub Actions**.
+Sin pasos manuales de build ni rama `gh-pages`.
+
+Para servir la compilación localmente tal como queda publicada:
+
+```bash
+npm run build && npm run preview     # http://localhost:4173
+```
+
 ## 🧩 Capas de Merged Reality
 
 | Capa | Qué añade |
@@ -145,6 +172,7 @@ npm test
   - **A · sereno**: gana en ~2 min, conserva SpO₂, fija posición ≤ 2.5 m, recibe estrategia.
   - **B · pánico**: pierde por hipoxia o colapso antes del rescate y sufre ~2.5× más réplicas/min.
   - **C · calma sin transmitir**: no hay rescate (el protocolo nunca se activa).
+- En CI, ambos tests se ejecutan **antes** de cualquier despliegue: si fallan, el sitio no se publica.
 - `domtest.mjs` monta el `index.html` real en jsdom, construye `Environment`, `Watch`, `Holograms`
   y `Hud`, y simula 210 s de frames comprobando que no hay excepciones y que el HUD refleja la
   telemetría.
