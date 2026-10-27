@@ -1,0 +1,88 @@
+name: Desplegar RESWATCH en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permisos mínimos: leer el repo, publicar Pages y firmar el despliegue con OIDC
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez; si llega otro push, se cancela el anterior en curso
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  build:
+    name: Pruebas y build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas (simulación + presentación)
+        run: npm test
+
+      - name: Compilar para producción
+        run: npm run build
+
+      - name: Verificar artefacto (rutas relativas para el subpath de Pages)
+        run: |
+          test -f dist/index.html || { echo "Falta dist/index.html"; exit 1; }
+          test -n "$(ls dist/assets/*.js 2>/dev/null)" || { echo "Faltan los bundles JS"; exit 1; }
+          grep -q '"\./assets/' dist/index.html || { echo "Los assets no son relativos"; exit 1; }
+          echo "Artefacto OK:"
+          du -sh dist
+          ls -la dist/assets
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Empaquetar el sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Publicar en Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Desplegar
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verificar el sitio publicado
+        run: |
+          URL="${{ steps.deployment.outputs.page_url }}"
+          echo "Comprobando $URL"
+          for i in $(seq 1 12); do
+            CODE=$(curl -sL -o /tmp/site.html -w '%{http_code}' "$URL" || true)
+            if [ "$CODE" = "200" ] && grep -q 'RESWATCH' /tmp/site.html; then
+              echo "✅ Sitio en línea ($CODE) tras $i intento(s)"
+              exit 0
+            fi
+            echo "Intento $i → HTTP $CODE, reintentando en 10 s…"
+            sleep 10
+          done
+          echo "❌ El sitio no respondió correctamente"
+          exit 1
